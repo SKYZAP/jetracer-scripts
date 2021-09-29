@@ -1,4 +1,4 @@
-Start the script by:
+## Getting Started
 
 1. Installing required Jetracer software as per https://www.waveshare.com/wiki/JetRacer_AI_Kit
 2. Run `sudo apt-get update` and let Jetracer fully update
