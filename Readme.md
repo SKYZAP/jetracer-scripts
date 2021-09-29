@@ -1,4 +1,4 @@
-Start the program by:
+Start the script by:
 
 1. Installing Jetracer programs
 2. Git bash this repository
