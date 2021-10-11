@@ -59,10 +59,21 @@ def startWSServer():
     asyncio.get_event_loop().run_forever()
 
 
+def uploadIM():
+    import requests
+    url = 'http://localhost:3000/api/uploadJetracer?'
+    files = {'media': open('bird.jpg', 'rb')}
+    requests.post(url, files=files)
+    return "DONE"
+
+
 if __name__ == '__main__':
     flaskServ = multiprocessing.Process(target=startFlaskApp)
     asyncioServ = multiprocessing.Process(target=startWSServer)
+    uploadTest = multiprocessing.Process(target=uploadIM)
     flaskServ.start()
     asyncioServ.start()
+    uploadTest.start()
     flaskServ.join()
     asyncioServ.join()
+    uploadTest.join()
