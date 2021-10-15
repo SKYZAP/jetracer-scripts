@@ -5,13 +5,14 @@ import asyncio
 import websockets
 import numpy as np
 from flask import Flask, render_template, Response, Blueprint
-from flask_sockets import Sockets
 import cv2
 import multiprocessing
+from threading import Thread
 
 app = Flask(__name__)
 
-gst_str = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1280, height=720, format=(string)NV12 ! nvvidconv ! video/x-raw, width=(int)1280, height=(int)720, format=(string)BGRx ! videoconvert ! appsink"
+gst_str = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1280, height=720, format=NV12 ! nvvidconv ! video/x-raw, width=224, height=224, format=BGRx ! videoconvert ! appsink"
+
 
 camera = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
 
@@ -42,7 +43,7 @@ def index():
 
 
 def startFlaskApp():
-    app.run(host='0.0.0.0', ssl_context='adhoc', threaded=True,
+    app.run(host='0.0.0.0', ssl_context="adhoc", threaded=True,
             port="5000")
 
 
@@ -53,27 +54,34 @@ async def wshandler(websocket, path):
         await asyncio.sleep(1)
 
 
-def startWSServer():
-    start_server = websockets.serve(wshandler, port=5555)
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+def startWSServer(loop, server):
+    loop.run_until_complete(server)
+    loop.run_forever()
 
 
 def uploadIM():
     import requests
-    url = 'http://localhost:3000/api/uploadJetracer?'
-    files = {'media': open('bird.jpg', 'rb')}
-    requests.post(url, files=files)
+#     url = 'http://localhost:3000/api/uploadJetracer?'
+#     files = {'media': open('bird.jpg', 'rb')}
+#     requests.post(url, files=files)
     return "DONE"
 
 
 if __name__ == '__main__':
-    flaskServ = multiprocessing.Process(target=startFlaskApp)
-    asyncioServ = multiprocessing.Process(target=startWSServer)
-    uploadTest = multiprocessing.Process(target=uploadIM)
-    flaskServ.start()
-    asyncioServ.start()
-    uploadTest.start()
-    flaskServ.join()
-    asyncioServ.join()
-    uploadTest.join()
+    #     flaskServ = multiprocessing.Process(target=startFlaskApp)
+    #     asyncioServ = multiprocessing.Process(target=startWSServer)
+    #     uploadTest = multiprocessing.Process(target=uploadIM)
+    #     flaskServ.start()
+    #     asyncioServ.start()
+    #     uploadTest.start()
+    #     flaskServ.join()
+    #     asyncioServ.join()
+    #     uploadTest.join()
+    new_loop = asyncio.new_event_loop()
+    start_server = websockets.serve(wshandler, port=5555, loop=new_loop)
+    flaskTask = Thread(target=startFlaskApp)
+    wsTask = Thread(target=startWSServer, args=(new_loop, start_server))
+    wsTask.start()
+    flaskTask.start()
+    wsTask.join()
+    flaskTask.join()
