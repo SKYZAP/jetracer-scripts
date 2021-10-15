@@ -1,12 +1,9 @@
-from aiohttp import web
-import aiohttp
 import json
 import asyncio
 import websockets
 import numpy as np
 from flask import Flask, render_template, Response, Blueprint
 import cv2
-import multiprocessing
 from threading import Thread
 
 app = Flask(__name__)
@@ -68,15 +65,6 @@ def uploadIM():
 
 
 if __name__ == '__main__':
-    #     flaskServ = multiprocessing.Process(target=startFlaskApp)
-    #     asyncioServ = multiprocessing.Process(target=startWSServer)
-    #     uploadTest = multiprocessing.Process(target=uploadIM)
-    #     flaskServ.start()
-    #     asyncioServ.start()
-    #     uploadTest.start()
-    #     flaskServ.join()
-    #     asyncioServ.join()
-    #     uploadTest.join()
     new_loop = asyncio.new_event_loop()
     start_server = websockets.serve(wshandler, port=5555, loop=new_loop)
     flaskTask = Thread(target=startFlaskApp)
