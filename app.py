@@ -2,9 +2,12 @@ import json
 import asyncio
 import websockets
 import numpy as np
-from flask import Flask, render_template, Response, Blueprint
+from flask import Flask, render_template, Response
 import cv2
 from threading import Thread
+import requests
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 app = Flask(__name__)
 
@@ -14,7 +17,23 @@ gst_str = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1280, height=720, 
 camera = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
 
 
-def gen_frames():  # generate frame by frame from camera
+def uploadIM(index, frame):
+    gauth = GoogleAuth()
+    gauth.LocalWebserverAuth()
+    drive = GoogleDrive(gauth)
+    fileName = "im"+str(index)+".jpg"
+    cv2.imwrite("images/"+fileName, frame)
+    imageFile = drive.CreateFile(
+        {'parents': [{'id': '1H6W8hv3ZYG-08yaiqX2sMllcAsGH00yf'}],
+         'title': fileName,
+         'mimeType': 'image/jpeg'})
+    imageFile.SetContentFile("images/"+fileName)
+    imageFile.Upload()
+    print("IMAGE UPLOADED")
+
+
+def gen_frames():
+    index = 0  # generate frame by frame from camera
     while True:
         # Capture frame-by-frame
         success, frame = camera.read()  # read the camera frame
@@ -22,6 +41,10 @@ def gen_frames():  # generate frame by frame from camera
             break
         else:
             ret, buffer = cv2.imencode('.jpg', frame)
+            print("INDEX: ", index)
+            if index % 120 == 0:
+                Thread(target=uploadIM, args=(index, frame)).start()
+            index += 1
             frame = buffer.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
@@ -54,14 +77,6 @@ async def wshandler(websocket, path):
 def startWSServer(loop, server):
     loop.run_until_complete(server)
     loop.run_forever()
-
-
-def uploadIM():
-    import requests
-#     url = 'http://localhost:3000/api/uploadJetracer?'
-#     files = {'media': open('bird.jpg', 'rb')}
-#     requests.post(url, files=files)
-    return "DONE"
 
 
 if __name__ == '__main__':
