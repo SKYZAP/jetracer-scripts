@@ -12,14 +12,12 @@ from pydrive.drive import GoogleDrive
 app = Flask(__name__)
 
 gst_str = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1280, height=720, format=NV12 ! nvvidconv ! video/x-raw, width=224, height=224, format=BGRx ! videoconvert ! appsink"
-
-
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
 camera = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
 
 
 def uploadIM(index, frame):
-    gauth = GoogleAuth()
-    gauth.LocalWebserverAuth()
     drive = GoogleDrive(gauth)
     fileName = "im"+str(index)+".jpg"
     cv2.imwrite("images/"+fileName, frame)
