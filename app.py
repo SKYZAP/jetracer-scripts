@@ -8,26 +8,44 @@ from threading import Thread
 import requests
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from datetime import datetime
 
 app = Flask(__name__)
 
 gst_str = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1280, height=720, format=NV12 ! nvvidconv ! video/x-raw, width=224, height=224, format=BGRx ! videoconvert ! appsink"
 gauth = GoogleAuth()
-gauth.LocalWebserverAuth()
+gauth.LoadCredentialsFile("credentials.json")
+if gauth.credentials is None:
+    gauth.LocalWebserverAuth()
+elif gauth.access_token_expired:
+    gauth.Refresh()
+else:
+    gauth.Authorize()
+gauth.SaveCredentialsFile("credentials.json")
 camera = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
 
 
 def uploadIM(index, frame):
     drive = GoogleDrive(gauth)
     fileName = "im"+str(index)+".jpg"
+    # Write image locally
     cv2.imwrite("images/"+fileName, frame)
+    # Create image metadata and upload to drive
     imageFile = drive.CreateFile(
         {'parents': [{'id': '1H6W8hv3ZYG-08yaiqX2sMllcAsGH00yf'}],
          'title': fileName,
          'mimeType': 'image/jpeg'})
     imageFile.SetContentFile("images/"+fileName)
     imageFile.Upload()
-    print("IMAGE UPLOADED")
+    # Find latest image ID
+    file_list = drive.ListFile(
+        {'q': "mimeType='image/jpeg' and trashed=false"}).GetList()
+    media_url = str(file_list[0]["id"])
+    media_date = datetime.now()
+    requests.post(
+        "http://localhost:3000/api/uploadJetracer?type=UPLOAD&date={}&url={}".format(media_date, media_url))
+    print({"media_ID": media_url}, {"media_date": media_date.isoformat()})
+    print("IMAGE: ", str(index), " UPLOADED")
 
 
 def gen_frames():
@@ -40,7 +58,7 @@ def gen_frames():
         else:
             ret, buffer = cv2.imencode('.jpg', frame)
             print("INDEX: ", index)
-            if index % 120 == 0:
+            if index % 1800 == 0 and index != 0:
                 Thread(target=uploadIM, args=(index, frame)).start()
             index += 1
             frame = buffer.tobytes()
