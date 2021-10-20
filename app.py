@@ -27,7 +27,7 @@ camera = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
 
 def uploadIM(index, frame):
     drive = GoogleDrive(gauth)
-    fileName = "im"+str(index)+".jpg"
+    fileName = "im.jpg"
     # Write image locally
     cv2.imwrite("images/"+fileName, frame)
     # Create image metadata and upload to drive
@@ -43,7 +43,7 @@ def uploadIM(index, frame):
     media_url = str(file_list[0]["id"])
     media_date = datetime.now()
     requests.post(
-        "http://localhost:3000/api/uploadJetracer?type=UPLOAD&date={}&url={}".format(media_date, media_url))
+        "https://fyp-dashboard.vercel.app/api/uploadJetracer?type=UPLOAD&date={}&url={}".format(media_date, media_url))
     print({"media_ID": media_url}, {"media_date": media_date.isoformat()})
     print("IMAGE: ", str(index), " UPLOADED")
 
