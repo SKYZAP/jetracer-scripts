@@ -9,8 +9,6 @@ import requests
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from datetime import datetime
-import ssl
-import pathlib
 import torch
 import torchvision.transforms as transforms
 import torch.nn.functional as F
