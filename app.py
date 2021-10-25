@@ -9,8 +9,37 @@ import requests
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from datetime import datetime
+import ssl
+import pathlib
+import torch
+import torchvision.transforms as transforms
+import torch.nn.functional as F
+import PIL.Image
+# These modules are available on jetracer by default
+from jetracer.nvidia_racecar import NvidiaRacecar
+from torch2trt import TRTModule
 
 app = Flask(__name__)
+
+mean = torch.Tensor([0.485, 0.456, 0.406]).cuda()
+std = torch.Tensor([0.229, 0.224, 0.225]).cuda()
+
+
+def preprocess(image):
+    device = torch.device('cuda')
+    image = PIL.Image.fromarray(image)
+    image = transforms.functional.to_tensor(image).to(device)
+    image.sub_(mean[:, None, None]).div_(std[:, None, None])
+    return image[None, ...]
+
+
+model_trt = TRTModule()
+model_trt.load_state_dict(torch.load('models/road_following_model_trt.pth'))
+
+car = NvidiaRacecar()
+STEERING_GAIN = 2
+STEERING_BIAS = 0.00
+car.throttle = -0.8
 
 gst_str = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1280, height=720, format=NV12 ! nvvidconv ! video/x-raw, width=224, height=224, format=BGRx ! videoconvert ! appsink"
 gauth = GoogleAuth()
@@ -22,6 +51,7 @@ elif gauth.access_token_expired:
 else:
     gauth.Authorize()
 gauth.SaveCredentialsFile("credentials.json")
+
 camera = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
 
 
@@ -49,7 +79,7 @@ def uploadIM(index, frame):
 
 
 def gen_frames():
-    index = 0  # generate frame by frame from camera
+    index = 0
     while True:
         # Capture frame-by-frame
         success, frame = camera.read()  # read the camera frame
@@ -57,6 +87,12 @@ def gen_frames():
             break
         else:
             ret, buffer = cv2.imencode('.jpg', frame)
+            # Self Driving Code
+            sd_image = preprocess(frame).half()
+            sd_output = model_trt(sd_image).detach().cpu().numpy().flatten()
+            sd_x = float(sd_output[0])
+            car.steering = -(sd_x * STEERING_GAIN + STEERING_BIAS)
+            # Google Upload Code
             print("INDEX: ", index)
             if index % 1800 == 0 and index != 0:
                 Thread(target=uploadIM, args=(index, frame)).start()
