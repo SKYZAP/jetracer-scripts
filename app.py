@@ -60,7 +60,7 @@ def uploadIM(index, frame):
     cv2.imwrite("images/"+fileName, frame)
     # Create image metadata and upload to drive
     imageFile = drive.CreateFile(
-        {'parents': [{'id': '1H6W8hv3ZYG-08yaiqX2sMllcAsGH00yf'}],
+        {'parents': [{'id': '1_mQi6kApzs1A3HDahea0OxfcXlb95tDj'}],
          'title': fileName,
          'mimeType': 'image/jpeg'})
     imageFile.SetContentFile("images/"+fileName)
